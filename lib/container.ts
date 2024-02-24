@@ -5,6 +5,7 @@ export class Container {
   private nameToClazz: Map<string, { singleton?: boolean; clazz: Clazz}> = new Map();
   private nameToInstance: Map<string, InstanceType<Clazz>> = new Map();
   
+  private constructor() {}
   public static getInstance() {
     if (!Container.instance) {
       Container.instance = new Container()
@@ -12,9 +13,9 @@ export class Container {
     return Container.instance
   }
 
-  register(clazz: Clazz, singleton = false) {
+  public register(clazz: Clazz, singleton = false) {
     if (this.nameToClazz.has(clazz.name)) {
-      throw new Error(`Class with name ${clazz.name} is already registered`)
+      throw new Error(`WARNING: Class with name ${clazz.name} is already registered`)
     }
 
     this.nameToClazz.set(clazz.name, { singleton, clazz })
@@ -38,6 +39,11 @@ export class Container {
     }
 
     return instance
+  }
+
+  dispose() {
+    this.nameToInstance.clear()
+    this.nameToClazz.clear()
   }
 }
 
