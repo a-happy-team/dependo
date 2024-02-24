@@ -2,8 +2,10 @@
   "name": "@a-happy-team/dependo",
   "version": "0.0.1",
   "description": "Typescript Dependency Injection",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
+    "build": "rimraf dist && tsc",
     "dev": "tsnd --respawn lib/index.ts",
     "dev:debug": "tsnd --respawn --inspect=4321 lib/index.ts",
     "test": "ts-node-test tests/"
