@@ -161,3 +161,13 @@ test('should resolve value as a singleton correctly', () => {
   const instance2 = container.resolve('test3')
   assert.strictEqual(instance, instance2)
 })
+
+test('should be able to inject using string token', () => {
+  container.register('test3', 'test3', false)
+  @injectable()
+  class TestClass17 {
+    @inject('test3') test3: string
+  }
+  const instance = container.resolve(TestClass17)
+  assert.strictEqual(instance.test3, 'test3')
+})
