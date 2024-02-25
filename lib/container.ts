@@ -1,9 +1,16 @@
-export type Clazz = new (...args: any[]) => any
+export type Token = Class | string
+
+export type Class = new (...args: any[]) => any
+export type ResolvedValue = string | number | boolean | InstanceType<Class>
+
+export type ValueToBeResolved = Factory | Class | ResolvedValue
+
+export type Factory = () => ResolvedValue
 
 export class Container {
   private static instance: Container
-  private nameToClazz: Map<string, { singleton?: boolean; clazz: Clazz}> = new Map();
-  private nameToInstance: Map<string, InstanceType<Clazz>> = new Map();
+  private tokenToValue: Map<string, { singleton?: boolean; value: ValueToBeResolved }> = new Map();
+  private tokenToResolved: Map<string, ResolvedValue> = new Map();
   
   private constructor() {}
   public static getInstance() {
@@ -13,37 +20,83 @@ export class Container {
     return Container.instance
   }
 
-  public register(clazz: Clazz, singleton = false) {
-    if (this.nameToClazz.has(clazz.name)) {
-      throw new Error(`WARNING: Class with name ${clazz.name} is already registered`)
+
+  public resolve<T extends Token>(token: T): ResolvedValue {
+    let parsedToken: string = typeof token === 'string' ? token : token.name
+
+    if (this.tokenToResolved.has(parsedToken)) {
+      return this.tokenToResolved.get(parsedToken) as ResolvedValue
     }
 
-    this.nameToClazz.set(clazz.name, { singleton, clazz })
-  }
+    const storedValue = this.tokenToValue.get(parsedToken)
 
-  public resolve<T extends Clazz>(clazz: T): InstanceType<T> {
-    if (this.nameToInstance.has(clazz.name)) {
-      return this.nameToInstance.get(clazz.name) as InstanceType<T>
+    if (!storedValue) {
+      throw new Error(`No value found for token ${parsedToken}`)
     }
 
-    const storedClazz = this.nameToClazz.get(clazz.name)
+    let instance: ResolvedValue = storedValue.value
 
-    if (!storedClazz) {
-      throw new Error(`Class with name ${clazz.name} is not registered`)
+    if (this.isClass(storedValue.value)) {
+      instance = new storedValue.value
     }
 
-    const instance = new storedClazz.clazz
+    if (this.isFactory(storedValue.value)) {
+      instance = storedValue.value()
+    }
 
-    if (storedClazz.singleton) {
-      this.nameToInstance.set(clazz.name, instance)
+    if (storedValue.singleton) {
+      this.tokenToResolved.set(parsedToken, instance)
     }
 
     return instance
   }
 
+  public register<T extends Class>(clazz: T, value: T, singleton: boolean): void
+  public register<T extends ResolvedValue>(token: string, value: T, singleton: boolean): void
+  public register<T extends Factory>(token: string, value: T, singleton: boolean): void
+  public register<T extends Class | ResolvedValue | Factory>(token: string, value: T, singleton = false) {
+    if (this.isClass(token)) {
+      console.log('registering class', token, singleton)
+      return this.registerClass(token, singleton)
+    }
+    
+    if (this.isFactory(value)) {
+      console.log('registering factory', value, singleton)
+      return this.registerFactory(token, value, singleton)
+    }
+
+    console.log('registering value', value, singleton)
+
+    return this.registerValue(token, value)
+  }
+
+  private registerClass(clazz: Class, singleton = false) {
+    if (this.tokenToValue.has(clazz.name)) {
+      throw new Error(`WARNING: Class with name ${clazz.name} is already registered`)
+    }
+
+    this.tokenToValue.set(clazz.name, { singleton, value: clazz })
+  }
+
+  private registerValue<T>(name: string, value: T) {
+    this.tokenToResolved.set(name, value)
+  }
+
+  private registerFactory<T>(name: string, factory: () => T, singleton = false) {
+    this.tokenToResolved.set(name, factory())
+  }
+
   dispose() {
-    this.nameToInstance.clear()
-    this.nameToClazz.clear()
+    this.tokenToResolved.clear()
+    this.tokenToValue.clear()
+  }
+
+  private isClass(value: any): value is Class {
+    return typeof value === 'function' && Object.getOwnPropertyNames(value).includes('prototype')
+  }
+
+  private isFactory(value: any): value is Factory {
+    return typeof value === 'function' && !this.isClass(value)
   }
 }
 
