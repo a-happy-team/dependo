@@ -1,6 +1,6 @@
 import assert from 'node:assert'
 import test from 'node:test'
-import { container, inject, injectable, singleton } from '../lib'
+import { container, inject, injectable } from '../lib'
 import { Container } from '../lib/container'
 
 test('should instantiate container correctly', (t) => {
@@ -9,32 +9,33 @@ test('should instantiate container correctly', (t) => {
 
 test('should register class correctly', (t) => {
   class TestClass0 {}
-  container.register(TestClass0)
-  assert.strictEqual(container['nameToClazz'].has('TestClass0'), true)
+  container.register(TestClass0, TestClass0, false)
+  console.log(container['tokenToValue'])
+  assert.strictEqual(container['tokenToValue'].has('TestClass0'), true)
 })
 
 test('should register class using decorator correctly', (t) => {
-  @injectable
+  @injectable()
   class TestClass00 {}
-  assert.strictEqual(container['nameToClazz'].has('TestClass00'), true)
+  assert.strictEqual(container['tokenToValue'].has('TestClass00'), true)
 })
 
 test('should register a class as a singleton correctly', (t) => {
-  @singleton
+  @injectable({ singleton: true})
   class TestClass1 {}
-  assert.strictEqual(container['nameToClazz'].get('TestClass1')?.singleton
+  assert.strictEqual(container['tokenToValue'].get('TestClass1')?.singleton
     , true)
 })
 
 test('should resolve class correctly', (t) => {
-  @injectable
+  @injectable()
   class TestClass2 {}
   const instance = container.resolve(TestClass2)
   assert.strictEqual(instance instanceof TestClass2, true)
 })
 
 test('should resolve class as a singleton correctly', (t) => {
-  @singleton
+  @injectable({ singleton: true })
   class TestClass3 {}
   const instance = container.resolve(TestClass3)
   const instance2 = container.resolve(TestClass3)
@@ -48,22 +49,22 @@ test('should throw error when resolving unregistered class', (t) => {
 
 test('should throw error when registering class with same name', (t) => {
   class TestClass5 {}
-  container.register(TestClass5)
-  assert.throws(() => container.register(TestClass5))
+  container.register(TestClass5, TestClass5, false)
+  assert.throws(() => container.register(TestClass5,TestClass5, false))
 })
 
 test('should dispose container correctly', (t) => {
   class TestClass6 {}
-  container.register(TestClass6)
+  container.register(TestClass6, TestClass6, false)
   container.dispose()
-  assert.strictEqual(container['nameToClazz'].size, 0)
-  assert.strictEqual(container['nameToInstance'].size, 0)
+  assert.strictEqual(container['tokenToValue'].size, 0)
+  assert.strictEqual(container['tokenToResolved'].size, 0)
 })
 
 test('should resolve class with dependencies correctly', (t) => {
-  @injectable
+  @injectable()
   class TestClass7 {}
-  @injectable
+  @injectable()
   class TestClass8 {
     @inject(TestClass7) testClass7: TestClass7
   }
@@ -72,9 +73,9 @@ test('should resolve class with dependencies correctly', (t) => {
 })
 
 test('should resolve class with dependencies as singletons correctly', (t) => {
-  @singleton
+  @injectable({ singleton: true })
   class TestClass9 {}
-  @injectable
+  @injectable()
   class TestClass10 {
     @inject(TestClass9) testClass9: TestClass9
   }
@@ -84,26 +85,26 @@ test('should resolve class with dependencies as singletons correctly', (t) => {
 })
 
 test('should resolve class with lots of dependencies correctly', (t) => {
-  @singleton
+  @injectable({ singleton: true })
   class TestClass11 {}
-  @injectable
+  @injectable()
   class TestClass12 {
     @inject(TestClass11) testClass11: TestClass11
   }
-  @injectable
+  @injectable()
   class TestClass13 {
     @inject(TestClass12) testClass12: TestClass12
   }
-  @injectable
+  @injectable()
   class TestClass14 {
     @inject(TestClass13) testClass13: TestClass13
   }
-  @injectable
+  @injectable()
   class TestClass15 {
     @inject(TestClass14) testClass14: TestClass14
   }
 
-  @injectable
+  @injectable()
   class TestClass16 {
     @inject(TestClass15) testClass15: TestClass15
     @inject(TestClass14) testClass14: TestClass14
@@ -118,4 +119,45 @@ test('should resolve class with lots of dependencies correctly', (t) => {
   const instance2 = container.resolve(TestClass16)
 
   assert.strictEqual(instance2 instanceof TestClass16, true)
+})
+
+test('should register factory correctly', () => {
+  const factory = () => 'test'
+  container.register('test', factory, false)
+  assert.strictEqual(container['tokenToResolved'].has('test'), true)
+})
+
+test('should resolve factory correctly', () => {
+  const factory = () => 'test'
+  container.register('test', factory, false)
+  const instance = container.resolve('test')
+  assert.strictEqual(instance, 'test')
+})
+
+test('should resolve factory as a singleton correctly', () => {
+  var counter = 1
+
+  const factory = () => counter++
+  container.register('test', factory, true)
+  const instance = container.resolve('test')
+  const instance2 = container.resolve('test')
+  assert.strictEqual(instance, instance2)
+})
+
+test('should register value correctly', () => {
+  container.register('test1', 'test1', false)
+  assert.strictEqual(container['tokenToResolved'].has('test1'), true)
+})
+
+test('should resolve value correctly', () => {
+  container.register('test2', 'test2', false)
+  const instance = container.resolve('test2')
+  assert.strictEqual(instance, 'test2')
+})
+
+test('should resolve value as a singleton correctly', () => {
+  container.register('test3', 'test3', true)
+  const instance = container.resolve('test3')
+  const instance2 = container.resolve('test3')
+  assert.strictEqual(instance, instance2)
 })

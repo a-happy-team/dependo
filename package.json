@@ -9,7 +9,7 @@
     "build": "rimraf dist && tsc",
     "dev": "tsnd --respawn lib/index.ts",
     "dev:debug": "tsnd --respawn --inspect=4321 lib/index.ts",
-    "test": "ts-node-test tests/"
+    "test": "tsnd tests/index.spec.ts"
   },
   "repository": {
     "type": "git",
