@@ -56,23 +56,19 @@ export class Container {
   public register<T extends Factory>(token: string, value: T, singleton: boolean): void
   public register<T extends Class | ResolvedValue | Factory>(token: string, value: T, singleton = false) {
     if (this.isClass(token)) {
-      console.log('registering class', token, singleton)
       return this.registerClass(token, singleton)
     }
     
     if (this.isFactory(value)) {
-      console.log('registering factory', value, singleton)
       return this.registerFactory(token, value, singleton)
     }
-
-    console.log('registering value', value, singleton)
 
     return this.registerValue(token, value)
   }
 
   private registerClass(clazz: Class, singleton = false) {
     if (this.tokenToValue.has(clazz.name)) {
-      throw new Error(`WARNING: Class with name ${clazz.name} is already registered`)
+      throw new Error(`Class with name ${clazz.name} is already registered`)
     }
 
     this.tokenToValue.set(clazz.name, { singleton, value: clazz })
@@ -99,6 +95,3 @@ export class Container {
     return typeof value === 'function' && !this.isClass(value)
   }
 }
-
-// Injectable -> register
-// Inject -> resolve
